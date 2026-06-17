@@ -5,15 +5,18 @@ import dotenv from 'dotenv';
 dotenv.config();
 const app = express();
 app.use(express.json());
-
-// Changed to capital 'Public' to match your GitHub folder configuration!
 app.use(express.static('Public')); 
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/ask', async (req, res) => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Updated to a stable production model
+    // Safely pull the key inside the route execution
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error("API key is missing from server environment settings.");
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const rawSpeechInput = req.body.prompt;
 
     const pipelinePrompt = `
@@ -69,7 +72,7 @@ app.post('/ask', async (req, res) => {
     res.json(payload);
 
   } catch (error) {
-    console.error(error);
+    console.error("Gemini Route Error:", error.message);
     res.json({
         metaSubject: "System Log",
         htmlCard: `
@@ -77,7 +80,7 @@ app.post('/ask', async (req, res) => {
                 <span class="tag tag-sys" style="background: #da3637; color: #fff;">Stream Process Error</span>
                 <h2>Data Processing Failure</h2>
                 <div class="def-box">
-                    <strong>Error Details:</strong> Unable to process voice packet structures or parse Gemini AI output.
+                    <strong>Error Details:</strong> ${error.message || "Unable to process voice packet structures or parse Gemini AI output."}
                 </div>
                 <ul class="bullet-list">
                     <li>Ensure your local API variables are fully refreshed.</li>
@@ -91,4 +94,3 @@ app.post('/ask', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Brain is running at http://localhost:${PORT}`));
-
