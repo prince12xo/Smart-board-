@@ -5,13 +5,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 const app = express();
 app.use(express.json());
-app.use(express.static('Public'));
+
+// Changed to capital 'Public' to match your GitHub folder configuration!
+app.use(express.static('Public')); 
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/ask', async (req, res) => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3.1-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Updated to a stable production model
     const rawSpeechInput = req.body.prompt;
 
     const pipelinePrompt = `
@@ -60,24 +62,26 @@ app.post('/ask', async (req, res) => {
     if (outputText.startsWith("```json")) {
         outputText = outputText.substring(7, outputText.length - 3).trim();
     } else if (outputText.startsWith("```")) {
-        outputT 
-          ext = outputText.substring(3, outputText.length - 3).trim();
+        outputText = outputText.substring(3, outputText.length - 3).trim();
     }
 
     const payload = JSON.parse(outputText);
     res.json(payload);
 
   } catch (error) {
+    console.error(error);
     res.json({
         metaSubject: "System Log",
         htmlCard: `
             <div class="pro-card" style="border-left-color: #da3637;">
-                <span class="tag tag-sys" style="background: #da3637; color: #fff;">Stream Proc>
-                <h2>Data Processing Synchronized</h2>
-                <div class="def-box">Processed raw stream input text block successfully: "<stro>
+                <span class="tag tag-sys" style="background: #da3637; color: #fff;">Stream Process Error</span>
+                <h2>Data Processing Failure</h2>
+                <div class="def-box">
+                    <strong>Error Details:</strong> Unable to process voice packet structures or parse Gemini AI output.
+                </div>
                 <ul class="bullet-list">
-                    <li>System analyzed voice packet structures cleanly.</li>
-                    <li>Toggle the target panel or use manual toolbars to refresh local variabl>
+                    <li>Ensure your local API variables are fully refreshed.</li>
+                    <li>Toggle your network configurations or check your prompt structure.</li>
                 </ul>
             </div>
         `
@@ -85,5 +89,6 @@ app.post('/ask', async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log('Brain is running at http://localhost:3000'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Brain is running at http://localhost:${PORT}`));
 
