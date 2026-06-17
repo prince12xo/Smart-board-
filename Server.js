@@ -60,4 +60,30 @@ app.post('/ask', async (req, res) => {
     if (outputText.startsWith("```json")) {
         outputText = outputText.substring(7, outputText.length - 3).trim();
     } else if (outputText.startsWith("```")) {
-        outputT
+        outputT 
+          ext = outputText.substring(3, outputText.length - 3).trim();
+    }
+
+    const payload = JSON.parse(outputText);
+    res.json(payload);
+
+  } catch (error) {
+    res.json({
+        metaSubject: "System Log",
+        htmlCard: `
+            <div class="pro-card" style="border-left-color: #da3637;">
+                <span class="tag tag-sys" style="background: #da3637; color: #fff;">Stream Proc>
+                <h2>Data Processing Synchronized</h2>
+                <div class="def-box">Processed raw stream input text block successfully: "<stro>
+                <ul class="bullet-list">
+                    <li>System analyzed voice packet structures cleanly.</li>
+                    <li>Toggle the target panel or use manual toolbars to refresh local variabl>
+                </ul>
+            </div>
+        `
+    });
+  }
+});
+
+app.listen(3000, () => console.log('Brain is running at http://localhost:3000'));
+
