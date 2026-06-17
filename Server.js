@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 const app = express();
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('Public'));
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
