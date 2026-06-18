@@ -9,7 +9,6 @@ app.use(express.static('Public'));
 
 app.post('/ask', async (req, res) => {
   try {
-    // Safely pull the key inside the route execution
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new Error("API key is missing from server environment settings.");
@@ -88,6 +87,52 @@ app.post('/ask', async (req, res) => {
                 </ul>
             </div>
         `
+    });
+  }
+});
+
+// NEW ENDPOINT: Dynamic Exam Weightage Generator
+app.post('/weightage', async (req, res) => {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new Error("API key is missing from server environment settings.");
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const activeSubject = req.body.subject || "General Academic Study";
+
+    const weightagePrompt = `
+      You are an expert Indian academic advisor. Provide the typical exam weightage details for the topic: "${activeSubject}".
+      Provide highly accurate weightage analysis specifically for:
+      1. Class 12 CBSE/State Boards (e.g. typical marks)
+      2. JEE Main (e.g. typical number of questions or importance)
+      3. NEET UG (e.g. typical number of questions, or "N/A" if it is a pure math topic)
+
+      Generate a raw JSON block containing exactly three fields: "boards", "jee", and "neet".
+      Keep each field extremely concise (max 3-4 words, like "6-8 Marks", "2 Questions", "3-4 Qs (High)").
+      Do not include any markdown backticks (\`\`\`json) or extra text formatting outside the raw JSON object structure.
+    `;
+
+    const result = await model.generateContent(weightagePrompt);
+    let outputText = result.response.text().trim();
+
+    if (outputText.startsWith("```json")) {
+        outputText = outputText.substring(7, outputText.length - 3).trim();
+    } else if (outputText.startsWith("```")) {
+        outputText = outputText.substring(3, outputText.length - 3).trim();
+    }
+
+    const payload = JSON.parse(outputText);
+    res.json(payload);
+
+  } catch (error) {
+    console.error("Weightage Route Error:", error.message);
+    res.json({
+        boards: "N/A",
+        jee: "Error",
+        neet: "Error"
     });
   }
 });
