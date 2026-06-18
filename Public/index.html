@@ -458,33 +458,66 @@
             }
         }
 
-        function showExamWeightage() {
+        async function showExamWeightage() {
             const wrapper = document.getElementById('examWeightWrapper');
-            let data = { boards: "High Weight", jee: "2-3 Qs", neet: "3-4 Qs" };
-
-            let ctx = currentSubjectContext.toLowerCase();
-            if (ctx.includes("goc") || ctx.includes("organic") || ctx.includes("chemistry")) {
-                data = { boards: "8-10 Marks", jee: "3 Qs (Core)", neet: "4 Qs (High)" };
-            } else if (ctx.includes("kinematics") || ctx.includes("motion") || ctx.includes("physics")) {
-                data = { boards: "5-7 Marks", jee: "1-2 Qs", neet: "2 Qs" };
-            } else if (ctx.includes("quadratic") || ctx.includes("equation") || ctx.includes("math")) {
-                data = { boards: "6 Marks", jee: "1 Qs", neet: "N/A" };
-            }
-
+            
+            // 1. Display a loading layout while fetching from the AI
             wrapper.innerHTML = `
                 <div class="exam-weight-box" id="activeWeightWidget">
                     <div class="exam-weight-title">
                         <span>🎯 ANALYSIS PROFILE: ${currentSubjectContext}</span>
-                        <span style="color:#ff7b72; font-size:0.65rem;">CLOSING IN 10s</span>
+                        <span style="color:#fbbf24; font-size:0.65rem;">CONSULTING AI...</span>
                     </div>
                     <div class="exam-weight-grid-items">
-                        <div class="exam-weight-card"><h4>Boards</h4><p>${data.boards}</p></div>
-                        <div class="exam-weight-card"><h4>JEE Main</h4><p>${data.jee}</p></div>
-                        <div class="exam-weight-card"><h4>NEET UG</h4><p>${data.neet}</p></div>
+                        <div class="exam-weight-card"><h4>Boards</h4><p>Analyzing...</p></div>
+                        <div class="exam-weight-card"><h4>JEE Main</h4><p>Analyzing...</p></div>
+                        <div class="exam-weight-card"><h4>NEET UG</h4><p>Analyzing...</p></div>
                     </div>
                 </div>
             `;
 
+            try {
+                // 2. Fetch the live weightage from the backend
+                const response = await fetch('/weightage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subject: currentSubjectContext })
+                });
+
+                const data = await response.json();
+
+                // 3. Inject the real AI-generated data into the widget
+                wrapper.innerHTML = `
+                    <div class="exam-weight-box" id="activeWeightWidget">
+                        <div class="exam-weight-title">
+                            <span>🎯 ANALYSIS PROFILE: ${currentSubjectContext}</span>
+                            <span style="color:#ff7b72; font-size:0.65rem;">CLOSING IN 15s</span>
+                        </div>
+                        <div class="exam-weight-grid-items">
+                            <div class="exam-weight-card"><h4>Boards</h4><p>${data.boards || "N/A"}</p></div>
+                            <div class="exam-weight-card"><h4>JEE Main</h4><p>${data.jee || "N/A"}</p></div>
+                            <div class="exam-weight-card"><h4>NEET UG</h4><p>${data.neet || "N/A"}</p></div>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                // Error fallback
+                wrapper.innerHTML = `
+                    <div class="exam-weight-box" id="activeWeightWidget">
+                        <div class="exam-weight-title">
+                            <span>🎯 ANALYSIS PROFILE: ${currentSubjectContext}</span>
+                            <span style="color:#da3637; font-size:0.65rem;">OFFLINE</span>
+                        </div>
+                        <div class="exam-weight-grid-items">
+                            <div class="exam-weight-card"><h4>Boards</h4><p>N/A</p></div>
+                            <div class="exam-weight-card"><h4>JEE Main</h4><p>Error</p></div>
+                            <div class="exam-weight-card"><h4>NEET UG</h4><p>Error</p></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 4. Gracefully close the widget after 15 seconds
             setTimeout(() => {
                 const activeWidget = document.getElementById('activeWeightWidget');
                 if (activeWidget) {
@@ -492,9 +525,9 @@
                     activeWidget.style.transition = "opacity 0.25s ease";
                     setTimeout(() => activeWidget.remove(), 250);
                 }
-            }, 10000);
+            }, 15000);
         }
-
+        
         function clearAllCanvas() {
             const wall = document.getElementById('boardWall');
             const clearHTML = `
