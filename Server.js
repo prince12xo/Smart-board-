@@ -1,5 +1,5 @@
 import express from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -14,8 +14,8 @@ app.post('/ask', async (req, res) => {
         throw new Error("API key is missing from server environment settings.");
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Switched engine to use Groq securely using your target variable hook
+    const groq = new Groq({ apiKey: apiKey });
     const rawSpeechInput = req.body.prompt;
 
     const pipelinePrompt = `
@@ -58,8 +58,14 @@ app.post('/ask', async (req, res) => {
       </div>
     `;
 
-    const result = await model.generateContent(pipelinePrompt);
-    let outputText = result.response.text().trim();
+    // Calling the lightning-fast alternative production model
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: pipelinePrompt }],
+      model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" } // Enforces beautiful perfect structural parsing arrays
+    });
+
+    let outputText = chatCompletion.choices[0].message.content.trim();
 
     if (outputText.startsWith("```json")) {
         outputText = outputText.substring(7, outputText.length - 3).trim();
@@ -71,7 +77,7 @@ app.post('/ask', async (req, res) => {
     res.json(payload);
 
   } catch (error) {
-    console.error("Gemini Route Error:", error.message);
+    console.error("Groq Prompt Processing Failure:", error.message);
     res.json({
         metaSubject: "System Log",
         htmlCard: `
@@ -79,7 +85,7 @@ app.post('/ask', async (req, res) => {
                 <span class="tag tag-sys" style="background: #da3637; color: #fff;">Stream Process Error</span>
                 <h2>Data Processing Failure</h2>
                 <div class="def-box">
-                    <strong>Error Details:</strong> ${error.message || "Unable to process voice packet structures or parse Gemini AI output."}
+                    <strong>Error Details:</strong> ${error.message || "Unable to process voice packet structures or parse Engine output."}
                 </div>
                 <ul class="bullet-list">
                     <li>Ensure your local API variables are fully refreshed.</li>
@@ -91,7 +97,7 @@ app.post('/ask', async (req, res) => {
   }
 });
 
-// NEW ENDPOINT: Dynamic Exam Weightage Generator
+// DYNAMIC WEIGHTAGE GENERATOR ROUTE
 app.post('/weightage', async (req, res) => {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -99,8 +105,7 @@ app.post('/weightage', async (req, res) => {
         throw new Error("API key is missing from server environment settings.");
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const groq = new Groq({ apiKey: apiKey });
     const activeSubject = req.body.subject || "General Academic Study";
 
     const weightagePrompt = `
@@ -115,8 +120,13 @@ app.post('/weightage', async (req, res) => {
       Do not include any markdown backticks (\`\`\`json) or extra text formatting outside the raw JSON object structure.
     `;
 
-    const result = await model.generateContent(weightagePrompt);
-    let outputText = result.response.text().trim();
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: weightagePrompt }],
+      model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" }
+    });
+
+    let outputText = chatCompletion.choices[0].message.content.trim();
 
     if (outputText.startsWith("```json")) {
         outputText = outputText.substring(7, outputText.length - 3).trim();
@@ -128,7 +138,7 @@ app.post('/weightage', async (req, res) => {
     res.json(payload);
 
   } catch (error) {
-    console.error("Weightage Route Error:", error.message);
+    console.error("Weightage Generation Failure:", error.message);
     res.json({
         boards: "N/A",
         jee: "Error",
@@ -139,3 +149,4 @@ app.post('/weightage', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Brain is running at http://localhost:${PORT}`));
+      
